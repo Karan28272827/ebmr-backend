@@ -1,0 +1,15 @@
+.vercel
+node_modules
+# dist is committed so Vercel can bundle it as a function artifact
+# !dist
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.vscode
+.idea
+.DS_Store
+*.log
+coverage
+*.tsbuildinfo
