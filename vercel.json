@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "installCommand": "npm install",
+  "buildCommand": "npx prisma generate && npm run build && npx prisma db push && npx ts-node -r tsconfig-paths/register src/seed/seed.ts",
+  "functions": {
+    "api/index.ts": {
+      "memory": 1024,
+      "maxDuration": 30,
+      "includeFiles": "dist/**,node_modules/.prisma/**,node_modules/@prisma/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
+  ]
+}
