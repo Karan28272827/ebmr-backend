@@ -1,11 +1,12 @@
 {
   "version": 2,
   "installCommand": "npm install --include=dev",
-  "buildCommand": "npx prisma generate && npm run build && cp -r dist api/dist && npx prisma db push && npx ts-node -r tsconfig-paths/register src/seed/seed.ts",
+  "buildCommand": "npx prisma generate && npx prisma db push && npx ts-node -r tsconfig-paths/register src/seed/seed.ts",
   "functions": {
     "api/index.ts": {
       "memory": 1024,
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "dist/**"
     }
   },
   "rewrites": [
