@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  BATCH_OPERATOR
+  SUPERVISOR
+  QA_REVIEWER
+  QA_MANAGER
+  QUALIFIED_PERSON
+}
+
+enum BatchState {
+  DRAFT
+  INITIATED
+  LINE_CLEARANCE
+  IN_PROGRESS
+  DEVIATION
+  HOLD
+  PENDING_QA
+  PENDING_QP
+  RELEASED
+  REJECTED
+}
+
+enum DeviationStatus {
+  OPEN
+  UNDER_REVIEW
+  CLOSED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role
+  createdAt    DateTime @default(now())
+
+  batches    Batch[]     @relation("InitiatedBy")
+  auditLogs  AuditLog[]
+  deviations Deviation[] @relation("RaisedBy")
+}
+
+model BatchTemplate {
+  id          String   @id @default(uuid())
+  productCode String   @unique
+  productName String
+  steps       Json
+  createdAt   DateTime @default(now())
+
+  batches Batch[]
+}
+
+model Batch {
+  id          String     @id @default(uuid())
+  batchNumber String     @unique
+  productCode String
+  productName String
+  batchSize   Float
+  state       BatchState @default(DRAFT)
+  initiatedBy String
+  initiatedAt DateTime?
+  completedAt DateTime?
+  steps       Json
+  signatures  Json       @default("[]")
+  templateId  String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  template   BatchTemplate @relation(fields: [templateId], references: [id])
+  initiator  User          @relation("InitiatedBy", fields: [initiatedBy], references: [id])
+  deviations Deviation[]
+  auditLogs  AuditLog[]
+}
+
+model Deviation {
+  id              String          @id @default(uuid())
+  batchId         String
+  stepNumber      Int
+  fieldName       String
+  expectedRange   String
+  actualValue     Float
+  raisedBy        String
+  raisedAt        DateTime        @default(now())
+  status          DeviationStatus @default(OPEN)
+  resolutionNotes String?
+  closedBy        String?
+  closedAt        DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  batch  Batch @relation(fields: [batchId], references: [id])
+  raiser User  @relation("RaisedBy", fields: [raisedBy], references: [id])
+}
+
+// Append-only audit log — never UPDATE or DELETE rows in this table
+model AuditLog {
+  id          String   @id @default(uuid())
+  eventType   String
+  entityType  String
+  entityId    String   // primary entity ID (could be batchId, userId, etc.)
+  batchId     String?  // FK to Batch — set when the event is Batch-related
+  actorId     String
+  actorRole   String
+  timestamp   DateTime @default(now())
+  beforeState Json?
+  afterState  Json?
+  metadata    Json?
+
+  actor User   @relation(fields: [actorId], references: [id])
+  batch Batch? @relation(fields: [batchId], references: [id])
+
+  @@index([entityId])
+  @@index([batchId])
+  @@index([actorId])
+  @@index([timestamp])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
