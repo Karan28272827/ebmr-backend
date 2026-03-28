@@ -1,8 +1,9 @@
 import 'reflect-metadata';
 import type { Request, Response } from 'express';
 
-// Use require() so esbuild does NOT try to bundle NestJS decorator code.
-// NestJS is loaded at runtime from pre-compiled dist/ (built by `nest build`).
+// Use require() so esbuild does not try to transform NestJS decorator code.
+// dist/ is copied into api/dist/ during the build step (cp -r dist api/dist)
+// so it lives in the same directory as this function and is auto-bundled by Vercel.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const express = require('express');
 
@@ -12,15 +13,13 @@ let ready = false;
 async function bootstrap() {
   if (ready) return;
 
-  // Dynamic requires — esbuild won't touch these; they resolve from dist/ at runtime
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  /* eslint-disable @typescript-eslint/no-var-requires */
   const { NestFactory } = require('@nestjs/core');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { ExpressAdapter } = require('@nestjs/platform-express');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { ValidationPipe } = require('@nestjs/common');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { AppModule } = require('../dist/app.module');
+  // ./dist resolves to api/dist/ — co-located with this file
+  const { AppModule } = require('./dist/app.module');
+  /* eslint-enable @typescript-eslint/no-var-requires */
 
   const app = await NestFactory.create(AppModule, new ExpressAdapter(server), {
     logger: ['error', 'warn'],
