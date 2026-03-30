@@ -16,6 +16,9 @@ const bcrypt = require("bcrypt");
 const prisma_service_1 = require("../prisma/prisma.service");
 const users_service_1 = require("../users/users.service");
 const audit_service_1 = require("../audit/audit.service");
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 30 * 60 * 1000;
+const PASSWORD_EXPIRY_DAYS = 90;
 let AuthService = class AuthService {
     constructor(prisma, usersService, jwtService, auditService) {
         this.prisma = prisma;
@@ -23,13 +26,59 @@ let AuthService = class AuthService {
         this.jwtService = jwtService;
         this.auditService = auditService;
     }
-    async login(email, password) {
+    async login(email, password, ipAddress) {
         const user = await this.usersService.findByEmail(email);
         if (!user)
             throw new common_1.UnauthorizedException('Invalid credentials');
+        if (!user.is_active)
+            throw new common_1.UnauthorizedException('Account is deactivated');
+        if (user.locked_until && user.locked_until > new Date()) {
+            const minutesLeft = Math.ceil((user.locked_until.getTime() - Date.now()) / 60000);
+            throw new common_1.UnauthorizedException(`Account locked. Try again in ${minutesLeft} minute(s).`);
+        }
         const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid)
+        if (!valid) {
+            const newAttempts = (user.failed_login_attempts || 0) + 1;
+            const shouldLock = newAttempts >= MAX_FAILED_ATTEMPTS;
+            const lockedUntil = shouldLock ? new Date(Date.now() + LOCKOUT_DURATION_MS) : null;
+            await this.prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    failed_login_attempts: newAttempts,
+                    last_failed_login: new Date(),
+                    ...(shouldLock ? { locked_until: lockedUntil } : {}),
+                },
+            });
+            if (shouldLock) {
+                await this.auditService.log({
+                    eventType: 'ACCOUNT_LOCKED',
+                    entityType: 'User',
+                    entityId: user.id,
+                    actorId: user.id,
+                    actorRole: user.role,
+                    afterState: { reason: 'Too many failed login attempts', locked_until: lockedUntil },
+                });
+            }
+            await this.auditService.log({
+                eventType: 'USER_LOGIN_FAILURE',
+                entityType: 'User',
+                entityId: user.id,
+                actorId: user.id,
+                actorRole: user.role,
+                afterState: { email: user.email, failed_attempts: newAttempts, ip: ipAddress },
+            });
             throw new common_1.UnauthorizedException('Invalid credentials');
+        }
+        const now = new Date();
+        await this.prisma.user.update({
+            where: { id: user.id },
+            data: {
+                failed_login_attempts: 0,
+                locked_until: null,
+                last_login_at: now,
+                last_login_ip: ipAddress || null,
+            },
+        });
         const payload = { sub: user.id, email: user.email, role: user.role, name: user.name };
         const accessToken = this.jwtService.sign(payload);
         const refreshToken = this.jwtService.sign(payload, {
@@ -39,14 +88,36 @@ let AuthService = class AuthService {
         const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000);
         await this.prisma.refreshToken.create({ data: { userId: user.id, token: refreshToken, expiresAt } });
         await this.auditService.log({
-            eventType: 'USER_LOGIN',
+            eventType: 'USER_LOGIN_SUCCESS',
             entityType: 'User',
             entityId: user.id,
             actorId: user.id,
             actorRole: user.role,
-            afterState: { email: user.email },
+            afterState: { email: user.email, ip: ipAddress },
         });
-        return { accessToken, refreshToken, user: { id: user.id, email: user.email, name: user.name, role: user.role } };
+        let expiry_warning = null;
+        if (user.password_changed_at) {
+            const daysSinceChange = Math.floor((Date.now() - user.password_changed_at.getTime()) / (1000 * 60 * 60 * 24));
+            if (daysSinceChange >= PASSWORD_EXPIRY_DAYS) {
+                expiry_warning = `Your password is ${daysSinceChange} days old. Please change it immediately.`;
+            }
+            else if (daysSinceChange >= PASSWORD_EXPIRY_DAYS - 10) {
+                const daysLeft = PASSWORD_EXPIRY_DAYS - daysSinceChange;
+                expiry_warning = `Your password will expire in ${daysLeft} day(s). Please change it soon.`;
+            }
+        }
+        return {
+            accessToken,
+            refreshToken,
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                force_password_change: user.force_password_change,
+            },
+            ...(expiry_warning ? { expiry_warning } : {}),
+        };
     }
     async refresh(refreshToken) {
         try {

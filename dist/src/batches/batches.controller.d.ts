@@ -33,6 +33,7 @@ export declare class BatchesController {
         steps: import("@prisma/client/runtime/library").JsonValue;
         signatures: import("@prisma/client/runtime/library").JsonValue;
         templateId: string;
+        bomId: string | null;
     })[]>;
     findOne(id: string): Promise<{
         deviations: {
@@ -71,6 +72,7 @@ export declare class BatchesController {
         steps: import("@prisma/client/runtime/library").JsonValue;
         signatures: import("@prisma/client/runtime/library").JsonValue;
         templateId: string;
+        bomId: string | null;
     }>;
     create(req: any, body: {
         templateId: string;
@@ -91,6 +93,7 @@ export declare class BatchesController {
         steps: import("@prisma/client/runtime/library").JsonValue;
         signatures: import("@prisma/client/runtime/library").JsonValue;
         templateId: string;
+        bomId: string | null;
     }>;
     transition(id: string, req: any, body: {
         toState: string;
@@ -110,6 +113,7 @@ export declare class BatchesController {
         steps: import("@prisma/client/runtime/library").JsonValue;
         signatures: import("@prisma/client/runtime/library").JsonValue;
         templateId: string;
+        bomId: string | null;
     }>;
     completeStep(id: string, stepNumber: string, req: any, body: {
         actualValues: any;
@@ -130,6 +134,7 @@ export declare class BatchesController {
             steps: import("@prisma/client/runtime/library").JsonValue;
             signatures: import("@prisma/client/runtime/library").JsonValue;
             templateId: string;
+            bomId: string | null;
         };
         deviationsRaised: number;
     }>;
@@ -148,6 +153,7 @@ export declare class BatchesController {
         steps: import("@prisma/client/runtime/library").JsonValue;
         signatures: import("@prisma/client/runtime/library").JsonValue;
         templateId: string;
+        bomId: string | null;
     }>;
     addSignature(id: string, req: any, body: {
         meaning: string;

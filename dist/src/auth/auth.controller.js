@@ -37,8 +37,9 @@ let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
-    login(dto) {
-        return this.authService.login(dto.email, dto.password);
+    login(dto, req) {
+        const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress;
+        return this.authService.login(dto.email, dto.password, ip);
     }
     refresh(dto) {
         return this.authService.refresh(dto.refreshToken);
@@ -51,8 +52,9 @@ exports.AuthController = AuthController;
 __decorate([
     (0, common_1.Post)('login'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [LoginDto]),
+    __metadata("design:paramtypes", [LoginDto, Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "login", null);
 __decorate([

@@ -32,6 +32,7 @@ export declare class BatchesService {
         steps: import("@prisma/client/runtime/library").JsonValue;
         signatures: import("@prisma/client/runtime/library").JsonValue;
         templateId: string;
+        bomId: string | null;
     })[]>;
     findOne(id: string): Promise<{
         deviations: {
@@ -70,6 +71,7 @@ export declare class BatchesService {
         steps: import("@prisma/client/runtime/library").JsonValue;
         signatures: import("@prisma/client/runtime/library").JsonValue;
         templateId: string;
+        bomId: string | null;
     }>;
     create(user: any, templateId: string, batchSize: number, batchNumber: string): Promise<{
         id: string;
@@ -86,6 +88,7 @@ export declare class BatchesService {
         steps: import("@prisma/client/runtime/library").JsonValue;
         signatures: import("@prisma/client/runtime/library").JsonValue;
         templateId: string;
+        bomId: string | null;
     }>;
     transition(batchId: string, user: any, toState: string, signature?: any): Promise<{
         id: string;
@@ -102,6 +105,7 @@ export declare class BatchesService {
         steps: import("@prisma/client/runtime/library").JsonValue;
         signatures: import("@prisma/client/runtime/library").JsonValue;
         templateId: string;
+        bomId: string | null;
     }>;
     completeStep(batchId: string, user: any, stepNumber: number, actualValues: any, signature?: any): Promise<{
         batch: {
@@ -119,6 +123,7 @@ export declare class BatchesService {
             steps: import("@prisma/client/runtime/library").JsonValue;
             signatures: import("@prisma/client/runtime/library").JsonValue;
             templateId: string;
+            bomId: string | null;
         };
         deviationsRaised: number;
     }>;
@@ -137,6 +142,7 @@ export declare class BatchesService {
         steps: import("@prisma/client/runtime/library").JsonValue;
         signatures: import("@prisma/client/runtime/library").JsonValue;
         templateId: string;
+        bomId: string | null;
     }>;
     addSignature(batchId: string, user: any, meaning: string, stepOrTransition: string, password: string): Promise<{
         user_id: any;

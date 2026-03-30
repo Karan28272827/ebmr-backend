@@ -11,12 +11,13 @@ const common_1 = require("@nestjs/common");
 const bom_service_1 = require("./bom.service");
 const bom_controller_1 = require("./bom.controller");
 const prisma_module_1 = require("../prisma/prisma.module");
+const audit_module_1 = require("../audit/audit.module");
 let BomModule = class BomModule {
 };
 exports.BomModule = BomModule;
 exports.BomModule = BomModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule],
+        imports: [prisma_module_1.PrismaModule, audit_module_1.AuditModule],
         providers: [bom_service_1.BomService],
         controllers: [bom_controller_1.BomController],
         exports: [bom_service_1.BomService],

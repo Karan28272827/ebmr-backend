@@ -2,11 +2,20 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const core_1 = require("@nestjs/core");
 const common_1 = require("@nestjs/common");
+const helmet_1 = require("helmet");
 const app_module_1 = require("./app.module");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.use((0, helmet_1.default)({
+        contentSecurityPolicy: false,
+        hsts: { maxAge: 31536000, includeSubDomains: true },
+    }));
     app.enableCors({
-        origin: ['http://localhost:5173', 'http://frontend:5173'],
+        origin: [
+            'http://localhost:5173',
+            'http://frontend:5173',
+            ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : []),
+        ],
         credentials: true,
     });
     app.useGlobalPipes(new common_1.ValidationPipe({ whitelist: true, transform: true }));

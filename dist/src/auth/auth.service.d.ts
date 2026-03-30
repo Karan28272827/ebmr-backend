@@ -8,7 +8,8 @@ export declare class AuthService {
     private jwtService;
     private auditService;
     constructor(prisma: PrismaService, usersService: UsersService, jwtService: JwtService, auditService: AuditService);
-    login(email: string, password: string): Promise<{
+    login(email: string, password: string, ipAddress?: string): Promise<{
+        expiry_warning?: string;
         accessToken: string;
         refreshToken: string;
         user: {
@@ -16,6 +17,7 @@ export declare class AuthService {
             email: string;
             name: string;
             role: import(".prisma/client").$Enums.Role;
+            force_password_change: boolean;
         };
     }>;
     refresh(refreshToken: string): Promise<{

@@ -20,6 +20,30 @@ let BomController = class BomController {
     constructor(svc) {
         this.svc = svc;
     }
+    findAll(productCode, status) {
+        return this.svc.findAll(productCode, status);
+    }
+    findOne(id) {
+        return this.svc.findOne(id);
+    }
+    create(req, body) {
+        return this.svc.create(req.user, body);
+    }
+    updateStatus(id, req, body) {
+        return this.svc.updateStatus(id, req.user, body.status);
+    }
+    simulate(id, body) {
+        return this.svc.simulate(id, body.targetBatchSize);
+    }
+    findAllLegacy() {
+        return this.svc.findAllLegacy();
+    }
+    addLegacyBomItem(body) {
+        return this.svc.addLegacyBomItem(body.templateId, body.materialId, body.qtyPerKg, body.notes);
+    }
+    removeLegacyBomItem(id) {
+        return this.svc.removeLegacyBomItem(id);
+    }
     getTemplateBoM(templateId) {
         return this.svc.getTemplateBoM(templateId);
     }
@@ -40,6 +64,66 @@ let BomController = class BomController {
     }
 };
 exports.BomController = BomController;
+__decorate([
+    (0, common_1.Get)(),
+    __param(0, (0, common_1.Query)('productCode')),
+    __param(1, (0, common_1.Query)('status')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], BomController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], BomController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Post)(),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], BomController.prototype, "create", null);
+__decorate([
+    (0, common_1.Patch)(':id/status'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", void 0)
+], BomController.prototype, "updateStatus", null);
+__decorate([
+    (0, common_1.Post)(':id/simulate'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], BomController.prototype, "simulate", null);
+__decorate([
+    (0, common_1.Get)('legacy/all'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], BomController.prototype, "findAllLegacy", null);
+__decorate([
+    (0, common_1.Post)('legacy/items'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], BomController.prototype, "addLegacyBomItem", null);
+__decorate([
+    (0, common_1.Delete)('legacy/items/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], BomController.prototype, "removeLegacyBomItem", null);
 __decorate([
     (0, common_1.Get)('templates/:templateId'),
     __param(0, (0, common_1.Param)('templateId')),

@@ -18,6 +18,11 @@ const prisma_module_1 = require("./prisma/prisma.module");
 const materials_module_1 = require("./materials/materials.module");
 const bom_module_1 = require("./bom/bom.module");
 const issues_module_1 = require("./issues/issues.module");
+const sop_module_1 = require("./sop/sop.module");
+const qc_module_1 = require("./qc/qc.module");
+const process_flow_module_1 = require("./process-flow/process-flow.module");
+const planning_module_1 = require("./planning/planning.module");
+const admin_module_1 = require("./admin/admin.module");
 function buildRedisConfig() {
     const url = process.env.REDIS_URL;
     if (url) {
@@ -55,6 +60,11 @@ exports.AppModule = AppModule = __decorate([
             materials_module_1.MaterialsModule,
             bom_module_1.BomModule,
             issues_module_1.IssuesModule,
+            sop_module_1.SopModule,
+            qc_module_1.QcModule,
+            process_flow_module_1.ProcessFlowModule,
+            planning_module_1.PlanningModule,
+            admin_module_1.AdminModule,
         ],
     })
 ], AppModule);

@@ -9,7 +9,8 @@ declare class RefreshDto {
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
-    login(dto: LoginDto): Promise<{
+    login(dto: LoginDto, req: any): Promise<{
+        expiry_warning?: string;
         accessToken: string;
         refreshToken: string;
         user: {
@@ -17,6 +18,7 @@ export declare class AuthController {
             email: string;
             name: string;
             role: import(".prisma/client").$Enums.Role;
+            force_password_change: boolean;
         };
     }>;
     refresh(dto: RefreshDto): Promise<{
