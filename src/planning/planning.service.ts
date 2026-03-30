@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 
@@ -166,7 +167,6 @@ export class PlanningService {
       throw new ForbiddenException('Only QA_MANAGER+ can approve plans');
     if (signature?.password) {
       // Verify password for e-signature
-      const bcrypt = await import('bcrypt');
       const usr = await this.prisma.user.findUnique({ where: { id: user.id } });
       const valid = await bcrypt.compare(signature.password, usr?.passwordHash || '');
       if (!valid) throw new ForbiddenException('Invalid password for e-signature');

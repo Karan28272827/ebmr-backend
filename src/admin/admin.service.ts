@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 
@@ -55,7 +56,6 @@ export class AdminService {
     if (!hasMinRole(requestUser.role, 'SYSTEM_ADMIN'))
       throw new ForbiddenException('Only SYSTEM_ADMIN can create users');
 
-    const bcrypt = await import('bcrypt');
     const passwordHash = await bcrypt.hash(data.password, 10);
 
     const user = await this.prisma.user.create({
@@ -160,7 +160,6 @@ export class AdminService {
   async resetPassword(requestUser: any, userId: string, newPassword: string) {
     if (!hasMinRole(requestUser.role, 'SYSTEM_ADMIN'))
       throw new ForbiddenException('Only SYSTEM_ADMIN can reset passwords');
-    const bcrypt = await import('bcrypt');
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await this.prisma.user.update({
       where: { id: userId },
