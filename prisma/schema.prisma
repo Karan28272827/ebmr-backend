@@ -34,6 +34,20 @@ enum DeviationStatus {
   CLOSED
 }
 
+enum IssueSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -42,9 +56,13 @@ model User {
   role         Role
   createdAt    DateTime @default(now())
 
-  batches    Batch[]     @relation("InitiatedBy")
-  auditLogs  AuditLog[]
-  deviations Deviation[] @relation("RaisedBy")
+  batches          Batch[]             @relation("InitiatedBy")
+  auditLogs        AuditLog[]
+  deviations       Deviation[]         @relation("RaisedBy")
+  issuances        MaterialIssuance[]  @relation("IssuancesIssued")
+  issuesRaised     Issue[]             @relation("IssueRaisedBy")
+  issuesAssigned   Issue[]             @relation("IssueAssignedTo")
+  issuesResolved   Issue[]             @relation("IssueResolvedBy")
 }
 
 model BatchTemplate {
@@ -54,7 +72,8 @@ model BatchTemplate {
   steps       Json
   createdAt   DateTime @default(now())
 
-  batches Batch[]
+  batches  Batch[]
+  bomItems BomItem[]
 }
 
 model Batch {
@@ -73,10 +92,12 @@ model Batch {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  template   BatchTemplate @relation(fields: [templateId], references: [id])
-  initiator  User          @relation("InitiatedBy", fields: [initiatedBy], references: [id])
+  template   BatchTemplate      @relation(fields: [templateId], references: [id])
+  initiator  User               @relation("InitiatedBy", fields: [initiatedBy], references: [id])
   deviations Deviation[]
   auditLogs  AuditLog[]
+  issuances  MaterialIssuance[]
+  issues     Issue[]
 }
 
 model Deviation {
@@ -128,4 +149,73 @@ model RefreshToken {
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+// ─── Bill of Materials ────────────────────────────────────────────────────────
+
+model Material {
+  id           String   @id @default(uuid())
+  materialCode String   @unique
+  materialName String
+  unit         String   // g, kg, mL, L, units
+  description  String?
+  createdAt    DateTime @default(now())
+
+  bomItems  BomItem[]
+  issuances MaterialIssuance[]
+}
+
+model BomItem {
+  id         String  @id @default(uuid())
+  templateId String
+  materialId String
+  qtyPerKg   Float   // required quantity (in material.unit) per 1 kg of batch output
+  notes      String?
+
+  template  BatchTemplate      @relation(fields: [templateId], references: [id])
+  material  Material           @relation(fields: [materialId], references: [id])
+  issuances MaterialIssuance[]
+
+  @@unique([templateId, materialId])
+}
+
+model MaterialIssuance {
+  id          String   @id @default(uuid())
+  batchId     String
+  bomItemId   String
+  materialId  String
+  lotNumber   String
+  requiredQty Float    // calculated at issuance time
+  issuedQty   Float
+  issuedBy    String
+  issuedAt    DateTime @default(now())
+
+  batch    Batch    @relation(fields: [batchId], references: [id])
+  bomItem  BomItem  @relation(fields: [bomItemId], references: [id])
+  material Material @relation(fields: [materialId], references: [id])
+  issuer   User     @relation("IssuancesIssued", fields: [issuedBy], references: [id])
+}
+
+// ─── Issues ───────────────────────────────────────────────────────────────────
+
+model Issue {
+  id          String        @id @default(uuid())
+  batchId     String?
+  title       String
+  description String
+  severity    IssueSeverity @default(MEDIUM)
+  status      IssueStatus   @default(OPEN)
+  raisedBy    String
+  raisedAt    DateTime      @default(now())
+  assignedTo  String?
+  resolution  String?
+  resolvedBy  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  batch    Batch? @relation(fields: [batchId], references: [id])
+  raiser   User   @relation("IssueRaisedBy", fields: [raisedBy], references: [id])
+  assignee User?  @relation("IssueAssignedTo", fields: [assignedTo], references: [id])
+  resolver User?  @relation("IssueResolvedBy", fields: [resolvedBy], references: [id])
 }

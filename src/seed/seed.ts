@@ -109,6 +109,37 @@ const TEMPLATES = [
   },
 ];
 
+// Materials master list
+const MATERIALS = [
+  { materialCode: 'RM-PARA-API', materialName: 'Paracetamol API', unit: 'g', description: 'Active pharmaceutical ingredient - Paracetamol' },
+  { materialCode: 'RM-STARCH', materialName: 'Maize Starch', unit: 'g', description: 'Excipient - binder/disintegrant' },
+  { materialCode: 'RM-MG-STEARATE', materialName: 'Magnesium Stearate', unit: 'g', description: 'Excipient - lubricant' },
+  { materialCode: 'RM-PVP-K30', materialName: 'PVP K-30 (Binder)', unit: 'g', description: 'Polyvinylpyrrolidone - granulation binder' },
+  { materialCode: 'RM-PURIFIED-WATER', materialName: 'Purified Water', unit: 'mL', description: 'Granulation solvent (USP grade)' },
+  { materialCode: 'RM-AMOX-API', materialName: 'Amoxicillin Trihydrate API', unit: 'g', description: 'Active pharmaceutical ingredient - Amoxicillin' },
+  { materialCode: 'RM-LACTOSE', materialName: 'Lactose Monohydrate', unit: 'g', description: 'Excipient - filler/diluent' },
+  { materialCode: 'RM-CAPSULE-0', materialName: 'Hard Gelatin Capsule Size 0', unit: 'units', description: 'Empty hard gelatin capsule shells, size 0' },
+  { materialCode: 'RM-TALC', materialName: 'Talc', unit: 'g', description: 'Excipient - glidant' },
+];
+
+// BoM: qty per 1 kg of batch output
+const BOM_ITEMS: Record<string, { materialCode: string; qtyPerKg: number; notes?: string }[]> = {
+  'PARA-500': [
+    { materialCode: 'RM-PARA-API', qtyPerKg: 500, notes: 'Core API — exact dispensing required' },
+    { materialCode: 'RM-STARCH', qtyPerKg: 50, notes: 'Disintegrant' },
+    { materialCode: 'RM-PVP-K30', qtyPerKg: 30, notes: 'Granulation binder solution 10% w/v' },
+    { materialCode: 'RM-MG-STEARATE', qtyPerKg: 5, notes: 'Add at final blending stage only' },
+    { materialCode: 'RM-PURIFIED-WATER', qtyPerKg: 200, notes: 'Granulation solvent — evaporated during drying' },
+  ],
+  'AMOX-250': [
+    { materialCode: 'RM-AMOX-API', qtyPerKg: 250, notes: 'Handle in BSC — hygroscopic' },
+    { materialCode: 'RM-LACTOSE', qtyPerKg: 80, notes: 'Diluent' },
+    { materialCode: 'RM-TALC', qtyPerKg: 15, notes: 'Glidant' },
+    { materialCode: 'RM-MG-STEARATE', qtyPerKg: 5, notes: 'Lubricant — add last, blend 3 min max' },
+    { materialCode: 'RM-CAPSULE-0', qtyPerKg: 2857, notes: 'Approx 350 mg fill weight per capsule' },
+  ],
+};
+
 async function main() {
   console.log('Seeding database...');
 
@@ -129,6 +160,34 @@ async function main() {
       create: { productCode: t.productCode, productName: t.productName, steps: t.steps },
     });
     console.log(`  Template: ${t.productName}`);
+  }
+
+  // Seed materials
+  const materialMap: Record<string, string> = {}; // materialCode -> id
+  for (const m of MATERIALS) {
+    const mat = await prisma.material.upsert({
+      where: { materialCode: m.materialCode },
+      update: {},
+      create: m,
+    });
+    materialMap[m.materialCode] = mat.id;
+    console.log(`  Material: ${m.materialCode}`);
+  }
+
+  // Seed BoM items
+  for (const [productCode, items] of Object.entries(BOM_ITEMS)) {
+    const template = await prisma.batchTemplate.findUnique({ where: { productCode } });
+    if (!template) continue;
+    for (const item of items) {
+      const materialId = materialMap[item.materialCode];
+      if (!materialId) continue;
+      await prisma.bomItem.upsert({
+        where: { templateId_materialId: { templateId: template.id, materialId } },
+        update: { qtyPerKg: item.qtyPerKg, notes: item.notes },
+        create: { templateId: template.id, materialId, qtyPerKg: item.qtyPerKg, notes: item.notes },
+      });
+      console.log(`  BoM: ${productCode} + ${item.materialCode}`);
+    }
   }
 
   console.log('Seed complete.');

@@ -15,6 +15,9 @@ const batches_module_1 = require("./batches/batches.module");
 const deviations_module_1 = require("./deviations/deviations.module");
 const audit_module_1 = require("./audit/audit.module");
 const prisma_module_1 = require("./prisma/prisma.module");
+const materials_module_1 = require("./materials/materials.module");
+const bom_module_1 = require("./bom/bom.module");
+const issues_module_1 = require("./issues/issues.module");
 function buildRedisConfig() {
     const url = process.env.REDIS_URL;
     if (url) {
@@ -49,6 +52,9 @@ exports.AppModule = AppModule = __decorate([
             batches_module_1.BatchesModule,
             deviations_module_1.DeviationsModule,
             audit_module_1.AuditModule,
+            materials_module_1.MaterialsModule,
+            bom_module_1.BomModule,
+            issues_module_1.IssuesModule,
         ],
     })
 ], AppModule);
