@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { BomService } from './bom.service';
-import { BomController } from './bom.controller';
+import { QcService } from './qc.service';
+import { QcController } from './qc.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [PrismaModule, AuditModule],
-  providers: [BomService],
-  controllers: [BomController],
-  exports: [BomService],
+  providers: [QcService],
+  controllers: [QcController],
+  exports: [QcService],
 })
-export class BomModule {}
+export class QcModule {}

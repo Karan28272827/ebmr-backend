@@ -7,12 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
 enum Role {
   BATCH_OPERATOR
   SUPERVISOR
+  LAB_ANALYST
   QA_REVIEWER
   QA_MANAGER
   QUALIFIED_PERSON
+  SYSTEM_ADMIN
 }
 
 enum BatchState {
@@ -48,13 +52,148 @@ enum IssueStatus {
   CLOSED
 }
 
+enum SOPStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  RETIRED
+}
+
+enum QCStage {
+  IQC
+  LQC
+  OQC
+}
+
+enum ParamDataType {
+  NUMERIC
+  TEXT
+  BOOLEAN
+  OPTION
+}
+
+enum QCTestStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum QCVerdict {
+  PASS
+  FAIL
+  CONDITIONAL_PASS
+}
+
+enum IntentStatus {
+  OPEN
+  PO_RAISED
+  FULFILLED
+  CANCELLED
+}
+
+enum POStatus {
+  RAISED
+  PARTIALLY_RECEIVED
+  FULLY_RECEIVED
+  CLOSED
+  CANCELLED
+}
+
+enum QCReceiptStatus {
+  PENDING_IQC
+  QUARANTINE
+  IQC_PASSED
+  IQC_FAILED
+  IN_STORES
+  CONSUMED
+}
+
+enum AccountsStatus {
+  PENDING
+  INVOICE_RECEIVED
+  APPROVED
+  PAYMENT_DONE
+}
+
+enum BOMStatus {
+  DRAFT
+  APPROVED
+  RETIRED
+}
+
+enum ComponentType {
+  ACTIVE
+  EXCIPIENT
+  PACKAGING
+  COATING
+  LUBRICANT
+  DISINTEGRANT
+}
+
+enum ChecklistExecStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum ChecklistCategory {
+  PREPARATION
+  SAFETY
+  EQUIPMENT
+  PROCEDURE
+  DOCUMENTATION
+}
+
+enum PlanStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  ACTIVE
+  COMPLETED
+}
+
+enum PlannedBatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AlertLevel {
+  CRITICAL
+  WARNING
+  NOTICE
+}
+
+enum DocType {
+  SOP
+  WORK_INSTRUCTION
+  TEST_METHOD
+  RISK_ASSESSMENT
+  VALIDATION_REPORT
+  REGULATORY_DOSSIER
+  PROCESS_FLOW_DIAGRAM
+}
+
+// ─── Core User & Auth ─────────────────────────────────────────────────────────
+
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  role         Role
-  createdAt    DateTime @default(now())
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  passwordHash          String
+  name                  String
+  role                  Role
+  is_active             Boolean   @default(true)
+  force_password_change Boolean   @default(false)
+  password_changed_at   DateTime?
+  password_history      String[]  @default([])
+  failed_login_attempts Int       @default(0)
+  locked_until          DateTime?
+  last_failed_login     DateTime?
+  last_login_at         DateTime?
+  last_login_ip         String?
+  createdAt             DateTime  @default(now())
 
   batches          Batch[]             @relation("InitiatedBy")
   auditLogs        AuditLog[]
@@ -89,15 +228,20 @@ model Batch {
   steps       Json
   signatures  Json       @default("[]")
   templateId  String
+  bomId       String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  template   BatchTemplate      @relation(fields: [templateId], references: [id])
-  initiator  User               @relation("InitiatedBy", fields: [initiatedBy], references: [id])
-  deviations Deviation[]
-  auditLogs  AuditLog[]
-  issuances  MaterialIssuance[]
-  issues     Issue[]
+  template              BatchTemplate      @relation(fields: [templateId], references: [id])
+  bom                   BOM?               @relation(fields: [bomId], references: [id])
+  initiator             User               @relation("InitiatedBy", fields: [initiatedBy], references: [id])
+  deviations            Deviation[]
+  auditLogs             AuditLog[]
+  issuances             MaterialIssuance[]
+  issues                Issue[]
+  qcTests               QCTest[]
+  materialUsages        BatchMaterialUsage[]
+  plannedBatchLinks     PlannedBatch[]
 }
 
 model Deviation {
@@ -125,8 +269,8 @@ model AuditLog {
   id          String   @id @default(uuid())
   eventType   String
   entityType  String
-  entityId    String   // primary entity ID (could be batchId, userId, etc.)
-  batchId     String?  // FK to Batch — set when the event is Batch-related
+  entityId    String
+  batchId     String?
   actorId     String
   actorRole   String
   timestamp   DateTime @default(now())
@@ -151,25 +295,26 @@ model RefreshToken {
   createdAt DateTime @default(now())
 }
 
-// ─── Bill of Materials ────────────────────────────────────────────────────────
+// ─── Legacy Bill of Materials (existing — kept for backward compat) ────────────
 
 model Material {
   id           String   @id @default(uuid())
   materialCode String   @unique
   materialName String
-  unit         String   // g, kg, mL, L, units
+  unit         String
   description  String?
   createdAt    DateTime @default(now())
 
   bomItems  BomItem[]
   issuances MaterialIssuance[]
+  receipts  MaterialReceipt[]
 }
 
 model BomItem {
   id         String  @id @default(uuid())
   templateId String
   materialId String
-  qtyPerKg   Float   // required quantity (in material.unit) per 1 kg of batch output
+  qtyPerKg   Float
   notes      String?
 
   template  BatchTemplate      @relation(fields: [templateId], references: [id])
@@ -185,7 +330,7 @@ model MaterialIssuance {
   bomItemId   String
   materialId  String
   lotNumber   String
-  requiredQty Float    // calculated at issuance time
+  requiredQty Float
   issuedQty   Float
   issuedBy    String
   issuedAt    DateTime @default(now())
@@ -218,4 +363,427 @@ model Issue {
   raiser   User   @relation("IssueRaisedBy", fields: [raisedBy], references: [id])
   assignee User?  @relation("IssueAssignedTo", fields: [assignedTo], references: [id])
   resolver User?  @relation("IssueResolvedBy", fields: [resolvedBy], references: [id])
+}
+
+// ─── Module 1: SOP ────────────────────────────────────────────────────────────
+
+model SOP {
+  id               String    @id @default(uuid())
+  sop_code         String    @unique
+  title            String
+  version          String
+  product_category String
+  status           SOPStatus @default(DRAFT)
+  approved_by      String?
+  approved_at      DateTime?
+  effective_date   DateTime?
+  review_date      DateTime?
+  created_by       String
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  sections          SOPSection[]
+  qc_parameter_sets QCParameterSet[]
+  bom_links         BOMSOPLink[]
+}
+
+model SOPSection {
+  id          String   @id @default(uuid())
+  sop_id      String
+  sop         SOP      @relation(fields: [sop_id], references: [id])
+  section_no  Int
+  title       String
+  content     String   @db.Text
+  is_critical Boolean  @default(false)
+  created_at  DateTime @default(now())
+}
+
+model QCParameterSet {
+  id         String   @id @default(uuid())
+  sop_id     String
+  sop        SOP      @relation(fields: [sop_id], references: [id])
+  name       String
+  qc_stage   QCStage
+  created_at DateTime @default(now())
+
+  parameters          QCParameter[]
+  bom_process_steps   BOMProcessStep[]
+}
+
+model QCParameter {
+  id                String         @id @default(uuid())
+  parameter_set_id  String
+  parameter_set     QCParameterSet @relation(fields: [parameter_set_id], references: [id])
+  param_code        String
+  name              String
+  data_type         ParamDataType
+  unit              String?
+  min_value         Float?
+  max_value         Float?
+  target_value      Float?
+  options           String[]
+  is_mandatory      Boolean        @default(true)
+  sampling_plan     String?
+  test_method       String?
+  display_order     Int
+}
+
+model BOMSOPLink {
+  id         String  @id @default(uuid())
+  bom_id     String
+  bom        BOM     @relation(fields: [bom_id], references: [id])
+  sop_id     String
+  sop        SOP     @relation(fields: [sop_id], references: [id])
+  is_primary Boolean @default(false)
+
+  @@unique([bom_id, sop_id])
+}
+
+// ─── Module 2: QC Tests ───────────────────────────────────────────────────────
+
+model QCTest {
+  id                  String       @id @default(uuid())
+  test_code           String       @unique
+  qc_stage            QCStage
+  status              QCTestStatus @default(PENDING)
+  material_receipt_id String?
+  batch_id            String?
+  step_number         Int?
+  assigned_to         String?
+  initiated_by        String
+  initiated_at        DateTime     @default(now())
+  completed_by        String?
+  completed_at        DateTime?
+  overall_verdict     QCVerdict?
+  verdict_notes       String?
+  verdict_by          String?
+  verdict_at          DateTime?
+
+  results          QCTestResult[]
+  material_receipt MaterialReceipt? @relation(fields: [material_receipt_id], references: [id])
+  batch            Batch?           @relation(fields: [batch_id], references: [id])
+  checklist_executions ChecklistExecution[]
+}
+
+model QCTestResult {
+  id              String   @id @default(uuid())
+  qc_test_id      String
+  qc_test         QCTest   @relation(fields: [qc_test_id], references: [id])
+  parameter_id    String
+  parameter_name  String
+  unit            String?
+  min_value       Float?
+  max_value       Float?
+  actual_value    String
+  is_within_spec  Boolean
+  tested_by       String
+  tested_at       DateTime @default(now())
+  notes           String?
+}
+
+// ─── Module 3: Material Lifecycle ─────────────────────────────────────────────
+
+model MaterialIntent {
+  id              String       @id @default(uuid())
+  intent_code     String       @unique
+  material_name   String
+  material_code   String
+  quantity_needed Float
+  unit            String
+  needed_by_date  DateTime
+  reason          String
+  batch_id        String?
+  raised_by       String
+  raised_at       DateTime     @default(now())
+  status          IntentStatus @default(OPEN)
+
+  purchase_orders PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id                String   @id @default(uuid())
+  po_number         String   @unique
+  intent_id         String
+  intent            MaterialIntent @relation(fields: [intent_id], references: [id])
+  supplier_name     String
+  supplier_code     String
+  material_name     String
+  material_code     String
+  quantity          Float
+  unit              String
+  unit_price        Float
+  total_value       Float
+  currency          String   @default("INR")
+  expected_delivery DateTime
+  status            POStatus @default(RAISED)
+  created_by        String
+  created_at        DateTime @default(now())
+
+  receipts MaterialReceipt[]
+  grns     GRN[]
+}
+
+model MaterialReceipt {
+  id                 String          @id @default(uuid())
+  receipt_code       String          @unique
+  po_id              String
+  po                 PurchaseOrder   @relation(fields: [po_id], references: [id])
+  material_id        String?
+  material           Material?       @relation(fields: [material_id], references: [id])
+  received_qty       Float
+  unit               String
+  received_by        String
+  received_at        DateTime        @default(now())
+  supplier_batch_no  String
+  manufacture_date   DateTime
+  expiry_date        DateTime
+  coa_reference      String?
+  qc_status          QCReceiptStatus @default(PENDING_IQC)
+  grn_id             String?
+  grn                GRN?            @relation("GRNReceipts", fields: [grn_id], references: [id])
+  store_location     String?
+
+  qc_tests              QCTest[]
+  batch_material_usages BatchMaterialUsage[]
+}
+
+model GRN {
+  id              String        @id @default(uuid())
+  grn_number      String        @unique
+  po_id           String
+  po              PurchaseOrder @relation(fields: [po_id], references: [id])
+  raised_by       String
+  raised_at       DateTime      @default(now())
+  accounts_status AccountsStatus @default(PENDING)
+  invoice_ref     String?
+  payment_due     DateTime?
+  payment_done    Boolean       @default(false)
+
+  receipts MaterialReceipt[] @relation("GRNReceipts")
+}
+
+model BatchMaterialUsage {
+  id            String          @id @default(uuid())
+  batch_id      String
+  batch         Batch           @relation(fields: [batch_id], references: [id])
+  receipt_id    String
+  receipt       MaterialReceipt @relation(fields: [receipt_id], references: [id])
+  step_number   Int
+  quantity_used Float
+  unit          String
+  recorded_by   String
+  recorded_at   DateTime        @default(now())
+}
+
+// ─── Module 4: Dynamic BOM ────────────────────────────────────────────────────
+
+model BOM {
+  id               String    @id @default(uuid())
+  bom_code         String    @unique
+  product_name     String
+  product_code     String
+  product_variant  String
+  base_batch_size  Float
+  base_unit        String
+  version          String
+  status           BOMStatus @default(DRAFT)
+  approved_by      String?
+  approved_at      DateTime?
+  created_by       String
+  created_at       DateTime  @default(now())
+
+  components    BOMComponent[]
+  process_steps BOMProcessStep[]
+  sop_links     BOMSOPLink[]
+  batches       Batch[]
+  planned_batches PlannedBatch[]
+}
+
+model BOMComponent {
+  id                       String        @id @default(uuid())
+  bom_id                   String
+  bom                      BOM           @relation(fields: [bom_id], references: [id])
+  material_code            String
+  material_name            String
+  component_type           ComponentType
+  quantity_per_base_batch  Float
+  unit                     String
+  overage_pct              Float         @default(0)
+  is_critical              Boolean       @default(false)
+  substitutes              String[]
+  display_order            Int
+}
+
+model BOMProcessStep {
+  id                   String          @id @default(uuid())
+  bom_id               String
+  bom                  BOM             @relation(fields: [bom_id], references: [id])
+  step_number          Int
+  title                String
+  description          String          @db.Text
+  equipment_type       String
+  duration_min         Float?
+  qc_parameter_set_id  String?
+  qc_parameter_set     QCParameterSet? @relation(fields: [qc_parameter_set_id], references: [id])
+  scalable_params      Json            @default("[]")
+  is_critical_step     Boolean         @default(false)
+}
+
+// ─── Module 5: QC Checklists ──────────────────────────────────────────────────
+
+model QCChecklist {
+  id             String    @id @default(uuid())
+  checklist_code String    @unique
+  title          String
+  qc_stage       QCStage
+  applicable_to  String[]
+  version        String
+  status         SOPStatus @default(DRAFT)
+  approved_by    String?
+  approved_at    DateTime?
+  created_by     String
+  created_at     DateTime  @default(now())
+
+  items      ChecklistItem[]
+  executions ChecklistExecution[]
+}
+
+model ChecklistItem {
+  id             String            @id @default(uuid())
+  checklist_id   String
+  checklist      QCChecklist       @relation(fields: [checklist_id], references: [id])
+  item_number    Int
+  category       ChecklistCategory
+  instruction    String            @db.Text
+  is_mandatory   Boolean           @default(true)
+  requires_value Boolean           @default(false)
+  value_label    String?
+  value_type     ParamDataType?
+  reference      String?
+
+  responses ChecklistItemResponse[]
+}
+
+model ChecklistExecution {
+  id           String              @id @default(uuid())
+  checklist_id String
+  checklist    QCChecklist         @relation(fields: [checklist_id], references: [id])
+  qc_test_id   String
+  qc_test      QCTest              @relation(fields: [qc_test_id], references: [id])
+  executed_by  String
+  started_at   DateTime            @default(now())
+  completed_at DateTime?
+  status       ChecklistExecStatus @default(IN_PROGRESS)
+
+  item_responses ChecklistItemResponse[]
+}
+
+model ChecklistItemResponse {
+  id             String             @id @default(uuid())
+  execution_id   String
+  execution      ChecklistExecution @relation(fields: [execution_id], references: [id])
+  item_id        String
+  item           ChecklistItem      @relation(fields: [item_id], references: [id])
+  is_completed   Boolean            @default(false)
+  value_recorded String?
+  notes          String?
+  completed_at   DateTime?
+}
+
+// ─── Module 6: Process Flow / Baseline Documentation ─────────────────────────
+
+model ProcessFlow {
+  id               String    @id @default(uuid())
+  flow_code        String    @unique
+  product_code     String
+  product_name     String
+  bom_id           String?
+  title            String
+  version          String
+  status           SOPStatus @default(DRAFT)
+  description      String    @db.Text
+  baseline_metrics Json      @default("{}")
+  approved_by      String?
+  approved_at      DateTime?
+  created_by       String
+  created_at       DateTime  @default(now())
+
+  stages    ProcessStage[]
+  documents BaselineDocument[]
+}
+
+model ProcessStage {
+  id               String      @id @default(uuid())
+  flow_id          String
+  flow             ProcessFlow @relation(fields: [flow_id], references: [id])
+  stage_number     Int
+  stage_name       String
+  department       String
+  responsible_role String
+  inputs           String[]
+  outputs          String[]
+  decision_points  Json        @default("[]")
+  duration_min     Float?
+  critical         Boolean     @default(false)
+  notes            String?
+}
+
+model BaselineDocument {
+  id             String      @id @default(uuid())
+  flow_id        String
+  flow           ProcessFlow @relation(fields: [flow_id], references: [id])
+  doc_type       DocType
+  title          String
+  file_reference String
+  version        String
+  uploaded_by    String
+  uploaded_at    DateTime    @default(now())
+}
+
+// ─── Module 7: Production Planning ───────────────────────────────────────────
+
+model ProductionPlan {
+  id          String     @id @default(uuid())
+  plan_code   String     @unique
+  plan_name   String
+  plan_period String
+  status      PlanStatus @default(DRAFT)
+  created_by  String
+  created_at  DateTime   @default(now())
+  approved_by String?
+  approved_at DateTime?
+
+  planned_batches PlannedBatch[]
+}
+
+model PlannedBatch {
+  id                  String             @id @default(uuid())
+  plan_id             String
+  plan                ProductionPlan     @relation(fields: [plan_id], references: [id])
+  bom_id              String
+  bom                 BOM                @relation(fields: [bom_id], references: [id])
+  planned_batch_size  Float
+  planned_start       DateTime
+  planned_end         DateTime
+  production_line     String
+  priority            Int                @default(5)
+  simulation_result   Json?
+  actual_batch_id     String?
+  actual_batch        Batch?             @relation(fields: [actual_batch_id], references: [id])
+  status              PlannedBatchStatus @default(SCHEDULED)
+}
+
+model MaterialExpiryAlert {
+  id              String     @id @default(uuid())
+  material_code   String
+  material_name   String
+  receipt_id      String
+  expiry_date     DateTime
+  quantity        Float
+  unit            String
+  days_to_expiry  Int
+  alert_level     AlertLevel
+  is_acknowledged Boolean    @default(false)
+  acknowledged_by String?
+  created_at      DateTime   @default(now())
 }

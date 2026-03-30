@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Delete, Param, Body, Request, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { BomService } from './bom.service';
 
@@ -6,6 +17,64 @@ import { BomService } from './bom.service';
 @Controller('bom')
 export class BomController {
   constructor(private svc: BomService) {}
+
+  // ─── Dynamic BOM ──────────────────────────────────────────────────────────────
+
+  @Get()
+  findAll(
+    @Query('productCode') productCode?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.svc.findAll(productCode, status);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.svc.findOne(id);
+  }
+
+  @Post()
+  create(@Request() req, @Body() body: any) {
+    return this.svc.create(req.user, body);
+  }
+
+  @Patch(':id/status')
+  updateStatus(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() body: { status: string },
+  ) {
+    return this.svc.updateStatus(id, req.user, body.status);
+  }
+
+  @Post(':id/simulate')
+  simulate(
+    @Param('id') id: string,
+    @Body() body: { targetBatchSize: number },
+  ) {
+    return this.svc.simulate(id, body.targetBatchSize);
+  }
+
+  // ─── Legacy BOM (BomDefinition page) ─────────────────────────────────────────
+
+  @Get('legacy/all')
+  findAllLegacy() {
+    return this.svc.findAllLegacy();
+  }
+
+  @Post('legacy/items')
+  addLegacyBomItem(
+    @Body() body: { templateId: string; materialId: string; qtyPerKg: number; notes?: string },
+  ) {
+    return this.svc.addLegacyBomItem(body.templateId, body.materialId, body.qtyPerKg, body.notes);
+  }
+
+  @Delete('legacy/items/:id')
+  removeLegacyBomItem(@Param('id') id: string) {
+    return this.svc.removeLegacyBomItem(id);
+  }
+
+  // ─── Legacy template/batch BOM (preserved existing routes) ───────────────────
 
   @Get('templates/:templateId')
   getTemplateBoM(@Param('templateId') templateId: string) {

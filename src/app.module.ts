@@ -9,6 +9,11 @@ import { PrismaModule } from './prisma/prisma.module';
 import { MaterialsModule } from './materials/materials.module';
 import { BomModule } from './bom/bom.module';
 import { IssuesModule } from './issues/issues.module';
+import { SopModule } from './sop/sop.module';
+import { QcModule } from './qc/qc.module';
+import { ProcessFlowModule } from './process-flow/process-flow.module';
+import { PlanningModule } from './planning/planning.module';
+import { AdminModule } from './admin/admin.module';
 
 function buildRedisConfig() {
   const url = process.env.REDIS_URL;
@@ -50,6 +55,11 @@ function buildRedisConfig() {
     MaterialsModule,
     BomModule,
     IssuesModule,
+    SopModule,
+    QcModule,
+    ProcessFlowModule,
+    PlanningModule,
+    AdminModule,
   ],
 })
 export class AppModule {}
