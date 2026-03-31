@@ -20,6 +20,9 @@ let AuditController = class AuditController {
     constructor(auditService) {
         this.auditService = auditService;
     }
+    verifyIntegrity(limit) {
+        return this.auditService.verifyIntegrity(limit ? parseInt(limit) : 1000);
+    }
     getForBatch(batchId) {
         return this.auditService.getForBatch(batchId);
     }
@@ -29,7 +32,14 @@ let AuditController = class AuditController {
 };
 exports.AuditController = AuditController;
 __decorate([
-    (0, common_1.Get)(':batchId'),
+    (0, common_1.Get)('integrity'),
+    __param(0, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], AuditController.prototype, "verifyIntegrity", null);
+__decorate([
+    (0, common_1.Get)('batch/:batchId'),
     __param(0, (0, common_1.Param)('batchId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),

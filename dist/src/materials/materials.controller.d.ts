@@ -49,6 +49,7 @@ export declare class MaterialsController {
     }>;
     createIntent(req: any, body: any): Promise<{
         id: string;
+        reason: string;
         status: import(".prisma/client").$Enums.IntentStatus;
         unit: string;
         intent_code: string;
@@ -56,7 +57,6 @@ export declare class MaterialsController {
         material_code: string;
         quantity_needed: number;
         needed_by_date: Date;
-        reason: string;
         batch_id: string | null;
         raised_by: string;
         raised_at: Date;
@@ -67,6 +67,7 @@ export declare class MaterialsController {
         };
     } & {
         id: string;
+        reason: string;
         status: import(".prisma/client").$Enums.IntentStatus;
         unit: string;
         intent_code: string;
@@ -74,7 +75,6 @@ export declare class MaterialsController {
         material_code: string;
         quantity_needed: number;
         needed_by_date: Date;
-        reason: string;
         batch_id: string | null;
         raised_by: string;
         raised_at: Date;
@@ -96,6 +96,7 @@ export declare class MaterialsController {
         created_by: string;
         created_at: Date;
         intent_id: string;
+        vendor_id: string | null;
     }>;
     findAllPOs(status?: string): Promise<({
         _count: {
@@ -103,6 +104,7 @@ export declare class MaterialsController {
         };
         intent: {
             id: string;
+            reason: string;
             status: import(".prisma/client").$Enums.IntentStatus;
             unit: string;
             intent_code: string;
@@ -110,7 +112,6 @@ export declare class MaterialsController {
             material_code: string;
             quantity_needed: number;
             needed_by_date: Date;
-            reason: string;
             batch_id: string | null;
             raised_by: string;
             raised_at: Date;
@@ -132,6 +133,7 @@ export declare class MaterialsController {
         created_by: string;
         created_at: Date;
         intent_id: string;
+        vendor_id: string | null;
     })[]>;
     createReceipt(req: any, body: any): Promise<{
         id: string;
@@ -215,6 +217,7 @@ export declare class MaterialsController {
             created_by: string;
             created_at: Date;
             intent_id: string;
+            vendor_id: string | null;
         };
         grn: {
             id: string;

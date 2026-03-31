@@ -23,6 +23,8 @@ export declare class BomService {
         version: string;
         approved_by: string | null;
         approved_at: Date | null;
+        locked_at: Date | null;
+        locked_by: string | null;
     })[]>;
     findOne(id: string): Promise<{
         components: {
@@ -74,6 +76,7 @@ export declare class BomService {
             qc_parameter_set_id: string | null;
             scalable_params: import("@prisma/client/runtime/library").JsonValue;
             is_critical_step: boolean;
+            has_lqc_gate: boolean;
         })[];
         sop_links: ({
             sop: {
@@ -111,6 +114,8 @@ export declare class BomService {
         version: string;
         approved_by: string | null;
         approved_at: Date | null;
+        locked_at: Date | null;
+        locked_by: string | null;
     }>;
     create(user: any, data: any): Promise<{
         id: string;
@@ -126,6 +131,8 @@ export declare class BomService {
         version: string;
         approved_by: string | null;
         approved_at: Date | null;
+        locked_at: Date | null;
+        locked_by: string | null;
     }>;
     updateStatus(id: string, user: any, status: string): Promise<{
         id: string;
@@ -141,6 +148,8 @@ export declare class BomService {
         version: string;
         approved_by: string | null;
         approved_at: Date | null;
+        locked_at: Date | null;
+        locked_by: string | null;
     }>;
     simulate(id: string, targetBatchSize: number): Promise<{
         bom_id: string;
@@ -193,6 +202,7 @@ export declare class BomService {
             qc_parameter_set_id: string | null;
             scalable_params: import("@prisma/client/runtime/library").JsonValue;
             is_critical_step: boolean;
+            has_lqc_gate: boolean;
         }[];
         stock_warnings: string[];
         expiry_warnings: string[];

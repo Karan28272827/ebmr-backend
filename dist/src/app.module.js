@@ -9,6 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const bull_1 = require("@nestjs/bull");
+const throttler_1 = require("@nestjs/throttler");
 const auth_module_1 = require("./auth/auth.module");
 const users_module_1 = require("./users/users.module");
 const batches_module_1 = require("./batches/batches.module");
@@ -23,6 +24,14 @@ const qc_module_1 = require("./qc/qc.module");
 const process_flow_module_1 = require("./process-flow/process-flow.module");
 const planning_module_1 = require("./planning/planning.module");
 const admin_module_1 = require("./admin/admin.module");
+const capa_module_1 = require("./capa/capa.module");
+const vendor_module_1 = require("./vendor/vendor.module");
+const stock_module_1 = require("./stock/stock.module");
+const qc_spec_module_1 = require("./qc-spec/qc-spec.module");
+const env_monitoring_module_1 = require("./env-monitoring/env-monitoring.module");
+const retention_module_1 = require("./retention/retention.module");
+const coa_module_1 = require("./coa/coa.module");
+const notifications_module_1 = require("./notifications/notifications.module");
 function buildRedisConfig() {
     const url = process.env.REDIS_URL;
     if (url) {
@@ -50,6 +59,7 @@ exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            throttler_1.ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
             bull_1.BullModule.forRoot(buildRedisConfig()),
             prisma_module_1.PrismaModule,
             auth_module_1.AuthModule,
@@ -65,6 +75,14 @@ exports.AppModule = AppModule = __decorate([
             process_flow_module_1.ProcessFlowModule,
             planning_module_1.PlanningModule,
             admin_module_1.AdminModule,
+            capa_module_1.CapaModule,
+            vendor_module_1.VendorModule,
+            stock_module_1.StockModule,
+            qc_spec_module_1.QcSpecModule,
+            env_monitoring_module_1.EnvMonitoringModule,
+            retention_module_1.RetentionModule,
+            coa_module_1.CoaModule,
+            notifications_module_1.NotificationsModule,
         ],
     })
 ], AppModule);

@@ -63,6 +63,7 @@ export declare class MaterialsService {
     }>;
     createIntent(user: any, data: any): Promise<{
         id: string;
+        reason: string;
         status: import(".prisma/client").$Enums.IntentStatus;
         unit: string;
         intent_code: string;
@@ -70,7 +71,6 @@ export declare class MaterialsService {
         material_code: string;
         quantity_needed: number;
         needed_by_date: Date;
-        reason: string;
         batch_id: string | null;
         raised_by: string;
         raised_at: Date;
@@ -81,6 +81,7 @@ export declare class MaterialsService {
         };
     } & {
         id: string;
+        reason: string;
         status: import(".prisma/client").$Enums.IntentStatus;
         unit: string;
         intent_code: string;
@@ -88,7 +89,6 @@ export declare class MaterialsService {
         material_code: string;
         quantity_needed: number;
         needed_by_date: Date;
-        reason: string;
         batch_id: string | null;
         raised_by: string;
         raised_at: Date;
@@ -110,6 +110,7 @@ export declare class MaterialsService {
         created_by: string;
         created_at: Date;
         intent_id: string;
+        vendor_id: string | null;
     }>;
     findAllPOs(status?: string): Promise<({
         _count: {
@@ -117,6 +118,7 @@ export declare class MaterialsService {
         };
         intent: {
             id: string;
+            reason: string;
             status: import(".prisma/client").$Enums.IntentStatus;
             unit: string;
             intent_code: string;
@@ -124,7 +126,6 @@ export declare class MaterialsService {
             material_code: string;
             quantity_needed: number;
             needed_by_date: Date;
-            reason: string;
             batch_id: string | null;
             raised_by: string;
             raised_at: Date;
@@ -146,6 +147,7 @@ export declare class MaterialsService {
         created_by: string;
         created_at: Date;
         intent_id: string;
+        vendor_id: string | null;
     })[]>;
     createReceipt(user: any, data: any): Promise<{
         id: string;
@@ -207,6 +209,7 @@ export declare class MaterialsService {
             created_by: string;
             created_at: Date;
             intent_id: string;
+            vendor_id: string | null;
         };
         grn: {
             id: string;

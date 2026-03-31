@@ -1,0 +1,145 @@
+import { VendorService } from './vendor.service';
+export declare class VendorController {
+    private vendorService;
+    constructor(vendorService: VendorService);
+    findAll(status?: string): Promise<({
+        _count: {
+            purchase_orders: number;
+        };
+    } & {
+        id: string;
+        name: string;
+        status: import(".prisma/client").$Enums.VendorStatus;
+        created_by: string;
+        created_at: Date;
+        notes: string | null;
+        updated_at: Date;
+        vendor_code: string;
+        country: string;
+        contact_name: string | null;
+        contact_email: string | null;
+        contact_phone: string | null;
+        address: string | null;
+        qualification_date: Date | null;
+        next_audit_date: Date | null;
+        materials_supplied: string[];
+        approved_categories: string[];
+    })[]>;
+    findOne(id: string): Promise<{
+        purchase_orders: {
+            id: string;
+            status: import(".prisma/client").$Enums.POStatus;
+            unit: string;
+            material_name: string;
+            material_code: string;
+            po_number: string;
+            supplier_name: string;
+            supplier_code: string;
+            quantity: number;
+            unit_price: number;
+            total_value: number;
+            currency: string;
+            expected_delivery: Date;
+            created_by: string;
+            created_at: Date;
+            intent_id: string;
+            vendor_id: string | null;
+        }[];
+    } & {
+        id: string;
+        name: string;
+        status: import(".prisma/client").$Enums.VendorStatus;
+        created_by: string;
+        created_at: Date;
+        notes: string | null;
+        updated_at: Date;
+        vendor_code: string;
+        country: string;
+        contact_name: string | null;
+        contact_email: string | null;
+        contact_phone: string | null;
+        address: string | null;
+        qualification_date: Date | null;
+        next_audit_date: Date | null;
+        materials_supplied: string[];
+        approved_categories: string[];
+    }>;
+    create(req: any, body: any): Promise<{
+        id: string;
+        name: string;
+        status: import(".prisma/client").$Enums.VendorStatus;
+        created_by: string;
+        created_at: Date;
+        notes: string | null;
+        updated_at: Date;
+        vendor_code: string;
+        country: string;
+        contact_name: string | null;
+        contact_email: string | null;
+        contact_phone: string | null;
+        address: string | null;
+        qualification_date: Date | null;
+        next_audit_date: Date | null;
+        materials_supplied: string[];
+        approved_categories: string[];
+    }>;
+    update(id: string, req: any, body: any): Promise<{
+        id: string;
+        name: string;
+        status: import(".prisma/client").$Enums.VendorStatus;
+        created_by: string;
+        created_at: Date;
+        notes: string | null;
+        updated_at: Date;
+        vendor_code: string;
+        country: string;
+        contact_name: string | null;
+        contact_email: string | null;
+        contact_phone: string | null;
+        address: string | null;
+        qualification_date: Date | null;
+        next_audit_date: Date | null;
+        materials_supplied: string[];
+        approved_categories: string[];
+    }>;
+    qualify(id: string, req: any): Promise<{
+        id: string;
+        name: string;
+        status: import(".prisma/client").$Enums.VendorStatus;
+        created_by: string;
+        created_at: Date;
+        notes: string | null;
+        updated_at: Date;
+        vendor_code: string;
+        country: string;
+        contact_name: string | null;
+        contact_email: string | null;
+        contact_phone: string | null;
+        address: string | null;
+        qualification_date: Date | null;
+        next_audit_date: Date | null;
+        materials_supplied: string[];
+        approved_categories: string[];
+    }>;
+    suspend(id: string, req: any, body: {
+        reason: string;
+    }): Promise<{
+        id: string;
+        name: string;
+        status: import(".prisma/client").$Enums.VendorStatus;
+        created_by: string;
+        created_at: Date;
+        notes: string | null;
+        updated_at: Date;
+        vendor_code: string;
+        country: string;
+        contact_name: string | null;
+        contact_email: string | null;
+        contact_phone: string | null;
+        address: string | null;
+        qualification_date: Date | null;
+        next_audit_date: Date | null;
+        materials_supplied: string[];
+        approved_categories: string[];
+    }>;
+}

@@ -1471,6 +1471,271 @@ async function main() {
     else {
         console.log(`  [NEW] Production Plan: ${newPlan.plan_code} (already has planned batches)`);
     }
+    const VENDORS = [
+        {
+            vendor_code: 'VEN-001',
+            name: 'PharmRaw Ltd',
+            country: 'India',
+            contact_name: 'Raj Patel',
+            contact_email: 'raj.patel@pharmraw.in',
+            contact_phone: '+91-22-1234-5678',
+            address: '42 Industrial Estate, Andheri East, Mumbai 400069',
+            status: 'ACTIVE',
+            qualification_date: new Date('2025-06-01'),
+            next_audit_date: new Date('2026-06-01'),
+            materials_supplied: ['RM-AMOX-API', 'RM-PARA-API'],
+            approved_categories: ['API', 'BULK'],
+            notes: 'Primary API supplier. GMP certified, WHO-GMP inspected 2024.',
+        },
+        {
+            vendor_code: 'VEN-002',
+            name: 'API Chemicals India',
+            country: 'India',
+            contact_name: 'Priya Sharma',
+            contact_email: 'priya@apichemicals.com',
+            contact_phone: '+91-80-9876-5432',
+            address: '15 Pharma Park, Bommasandra Industrial Area, Bangalore 560099',
+            status: 'ACTIVE',
+            qualification_date: new Date('2025-01-15'),
+            next_audit_date: new Date('2026-07-15'),
+            materials_supplied: ['RM-AMOX-API', 'RM-PARA-API'],
+            approved_categories: ['API'],
+            notes: 'Secondary API supplier. ISO 9001:2015 certified.',
+        },
+        {
+            vendor_code: 'VEN-003',
+            name: 'Excipient Distributors',
+            country: 'India',
+            contact_name: 'Anil Kumar',
+            contact_email: 'anil@excipientdist.com',
+            contact_phone: '+91-44-7890-1234',
+            address: '88 Ambattur Industrial Estate, Chennai 600058',
+            status: 'ACTIVE',
+            qualification_date: new Date('2024-11-01'),
+            next_audit_date: new Date('2026-05-01'),
+            materials_supplied: ['RM-LACTOSE', 'RM-STARCH', 'RM-TALC', 'RM-MG-STEARATE'],
+            approved_categories: ['EXCIPIENT'],
+            notes: 'Approved excipient supplier.',
+        },
+    ];
+    for (const v of VENDORS) {
+        const existing = await prisma.vendor.findUnique({ where: { vendor_code: v.vendor_code } });
+        if (!existing) {
+            await prisma.vendor.create({ data: { ...v, created_by: resolvedQaManagerId } });
+            console.log(`  [Phase2] Vendor: ${v.vendor_code} — ${v.name}`);
+        }
+    }
+    const CAPAS = [
+        {
+            capa_code: 'CAPA-2026-0001',
+            source: 'DEVIATION',
+            source_ref: 'DEV-001',
+            title: 'Capsule Fill Weight OOS — Root Cause Analysis',
+            description: 'Multiple capsule fill weight readings fell below minimum specification (320mg) during batch AMOX-2026-001 production. Investigation required per GMP guidelines.',
+            root_cause: 'Capsule filling machine punch #3 worn, causing under-fill. Vibration dampener also found degraded.',
+            immediate_action: 'Production stopped. Defective capsules quarantined. Punch #3 replaced immediately.',
+            corrective_action: 'Replace all worn capsule filling machine punches. Recalibrate machine. Re-validate fill weight sampling procedure.',
+            preventive_action: 'Implement quarterly preventive maintenance schedule for capsule filling machine. Add punch wear check to shift start checklist.',
+            status: 'IN_PROGRESS',
+            priority: 'HIGH',
+            assigned_to: resolvedQaManagerId,
+            due_date: new Date('2026-04-30'),
+            raised_by: resolvedQaManagerId,
+        },
+        {
+            capa_code: 'CAPA-2026-0002',
+            source: 'AUDIT',
+            source_ref: 'AUD-2026-Q1',
+            title: 'Incomplete BMR Documentation — Batch Signature Gaps',
+            description: 'Q1 2026 internal audit identified 3 batch records with missing supervisor counter-signatures at step completion. Regulatory non-compliance risk.',
+            root_cause: 'No automated reminder for pending signatures. Supervisors complete signatures at end of shift causing delays.',
+            corrective_action: 'Implement automated signature reminder in eBMR system. Train supervisors on real-time signature requirements.',
+            preventive_action: 'Add signature completion metric to supervisor KPIs. Monthly audit of signature compliance.',
+            status: 'OPEN',
+            priority: 'MEDIUM',
+            assigned_to: resolvedSupervisorId,
+            due_date: new Date('2026-05-15'),
+            raised_by: resolvedQaManagerId,
+        },
+        {
+            capa_code: 'CAPA-2026-0003',
+            source: 'COMPLAINT',
+            source_ref: 'CMP-2026-001',
+            title: 'Patient Complaint — Capsule Discolouration',
+            description: 'Customer pharmacy reported 3 packs of Amoxicillin 250mg with visible capsule body discolouration. Retention samples retrieved and under testing.',
+            status: 'OPEN',
+            priority: 'CRITICAL',
+            due_date: new Date('2026-04-14'),
+            raised_by: resolvedQaManagerId,
+        },
+    ];
+    for (const c of CAPAS) {
+        const existing = await prisma.cAPA.findUnique({ where: { capa_code: c.capa_code } });
+        if (!existing) {
+            await prisma.cAPA.create({
+                data: {
+                    ...c,
+                    raised_at: new Date(),
+                },
+            });
+            console.log(`  [Phase2] CAPA: ${c.capa_code}`);
+        }
+    }
+    const QC_SPECS = [
+        {
+            spec_code: 'QCS-AMOX-250-v1',
+            product_code: 'AMOX-250',
+            product_name: 'Amoxicillin 250mg Capsule',
+            version: 'v1.0',
+            status: 'APPROVED',
+            parameters: [
+                { param_code: 'IQC-AMOX-ID', name: 'Identity (IR Spectroscopy)', qc_stage: 'IQC', data_type: 'BOOLEAN', is_mandatory: true, test_method: 'BP 2023, IR method', display_order: 1 },
+                { param_code: 'IQC-AMOX-WC', name: 'Water Content (%)', qc_stage: 'IQC', data_type: 'NUMERIC', unit: '%', min_value: 11.5, max_value: 14.5, is_mandatory: true, test_method: 'Karl Fischer', display_order: 2 },
+                { param_code: 'LQC-FILL-WT', name: 'Capsule Fill Weight (mg)', qc_stage: 'LQC', data_type: 'NUMERIC', unit: 'mg', min_value: 320, max_value: 340, target_value: 330, is_mandatory: true, test_method: 'Analytical balance', sampling_plan: '5 capsules q30min', display_order: 3 },
+                { param_code: 'OQC-DISS', name: 'Dissolution at 45 min (%)', qc_stage: 'OQC', data_type: 'NUMERIC', unit: '%', min_value: 80, max_value: 100, target_value: 90, is_mandatory: true, test_method: 'BP 2023 Sec 2.9.3', sampling_plan: '6 capsules', display_order: 4 },
+                { param_code: 'OQC-ASSAY', name: 'Assay by HPLC (%)', qc_stage: 'OQC', data_type: 'NUMERIC', unit: '%', min_value: 95.0, max_value: 105.0, target_value: 100.0, is_mandatory: true, test_method: 'BP 2023 HPLC method', display_order: 5 },
+            ],
+        },
+        {
+            spec_code: 'QCS-PARA-500-v1',
+            product_code: 'PARA-500',
+            product_name: 'Paracetamol 500mg Tablet',
+            version: 'v1.0',
+            status: 'APPROVED',
+            parameters: [
+                { param_code: 'IQC-PARA-ID', name: 'Identity (UV Spectroscopy)', qc_stage: 'IQC', data_type: 'BOOLEAN', is_mandatory: true, test_method: 'BP 2023 UV method', display_order: 1 },
+                { param_code: 'LQC-TABLET-WT', name: 'Tablet Weight (mg)', qc_stage: 'LQC', data_type: 'NUMERIC', unit: 'mg', min_value: 490, max_value: 510, target_value: 500, is_mandatory: true, test_method: 'Analytical balance', sampling_plan: '10 tablets per check', display_order: 2 },
+                { param_code: 'LQC-HARDNESS', name: 'Tablet Hardness (kP)', qc_stage: 'LQC', data_type: 'NUMERIC', unit: 'kP', min_value: 6.5, max_value: 9.5, target_value: 8.0, is_mandatory: true, test_method: 'Monsanto hardness tester', display_order: 3 },
+                { param_code: 'OQC-DISS-PARA', name: 'Dissolution at 30 min (%)', qc_stage: 'OQC', data_type: 'NUMERIC', unit: '%', min_value: 80, max_value: 100, target_value: 90, is_mandatory: true, test_method: 'BP 2023 Paddle 50rpm', display_order: 4 },
+                { param_code: 'OQC-ASSAY-PARA', name: 'Assay (%)', qc_stage: 'OQC', data_type: 'NUMERIC', unit: '%', min_value: 95.0, max_value: 105.0, is_mandatory: true, test_method: 'BP 2023 HPLC', display_order: 5 },
+            ],
+        },
+    ];
+    for (const spec of QC_SPECS) {
+        const existing = await prisma.qCSpecification.findUnique({ where: { spec_code: spec.spec_code } });
+        if (!existing) {
+            const createdSpec = await prisma.qCSpecification.create({
+                data: {
+                    spec_code: spec.spec_code,
+                    product_code: spec.product_code,
+                    product_name: spec.product_name,
+                    version: spec.version,
+                    status: spec.status,
+                    created_by: resolvedQaManagerId,
+                    approved_by: resolvedQaManagerId,
+                    approved_at: new Date(),
+                },
+            });
+            for (const p of spec.parameters) {
+                await prisma.qCSpecParameter.create({ data: { spec_id: createdSpec.id, ...p } });
+            }
+            console.log(`  [Phase2] QC Spec: ${spec.spec_code} (${spec.parameters.length} parameters)`);
+        }
+    }
+    const MONITORING_AREAS = [
+        {
+            area_code: 'MA-001',
+            name: 'Capsule Filling Area',
+            location: 'Manufacturing Block A — Room 104',
+            classification: 'ISO 7',
+            alert_limit: { PARTICULATE_0_5: 352000, PARTICULATE_5_0: 2900, MICROBIAL: 100, TEMPERATURE: 25, HUMIDITY: 55, PRESSURE_DIFFERENTIAL: 12.5 },
+            action_limit: { PARTICULATE_0_5: 500000, PARTICULATE_5_0: 3500, MICROBIAL: 200, TEMPERATURE: 27, HUMIDITY: 60, PRESSURE_DIFFERENTIAL: 10 },
+        },
+        {
+            area_code: 'MA-002',
+            name: 'Tablet Compression Area',
+            location: 'Manufacturing Block B — Room 201',
+            classification: 'ISO 8',
+            alert_limit: { PARTICULATE_0_5: 3520000, PARTICULATE_5_0: 29000, MICROBIAL: 200, TEMPERATURE: 25, HUMIDITY: 50, PRESSURE_DIFFERENTIAL: 10 },
+            action_limit: { PARTICULATE_0_5: 5000000, PARTICULATE_5_0: 40000, MICROBIAL: 500, TEMPERATURE: 28, HUMIDITY: 60, PRESSURE_DIFFERENTIAL: 8 },
+        },
+        {
+            area_code: 'MA-003',
+            name: 'QC Laboratory',
+            location: 'QC Building — Room 301',
+            classification: 'Controlled',
+            alert_limit: { TEMPERATURE: 22, HUMIDITY: 50 },
+            action_limit: { TEMPERATURE: 25, HUMIDITY: 55 },
+        },
+    ];
+    const areaMap = {};
+    for (const area of MONITORING_AREAS) {
+        const existing = await prisma.monitoringArea.findUnique({ where: { area_code: area.area_code } });
+        if (!existing) {
+            const created = await prisma.monitoringArea.create({ data: area });
+            areaMap[area.area_code] = created.id;
+            console.log(`  [Phase3] Monitoring Area: ${area.area_code} — ${area.name}`);
+        }
+        else {
+            areaMap[area.area_code] = existing.id;
+        }
+    }
+    const labAnalyst = await prisma.user.findUnique({ where: { email: 'lab_analyst@ebmr.dev' } });
+    const analystId = labAnalyst?.id ?? resolvedQaManagerId;
+    const ENV_READINGS = [
+        { area_code: 'MA-001', reading_type: 'TEMPERATURE', value: 24.2, unit: '°C', status: 'PASS' },
+        { area_code: 'MA-001', reading_type: 'HUMIDITY', value: 52.1, unit: '%RH', status: 'PASS' },
+        { area_code: 'MA-001', reading_type: 'PRESSURE_DIFFERENTIAL', value: 13.5, unit: 'Pa', status: 'PASS' },
+        { area_code: 'MA-002', reading_type: 'TEMPERATURE', value: 26.8, unit: '°C', status: 'BORDERLINE' },
+        { area_code: 'MA-002', reading_type: 'HUMIDITY', value: 58.3, unit: '%RH', status: 'BORDERLINE' },
+        { area_code: 'MA-003', reading_type: 'TEMPERATURE', value: 21.5, unit: '°C', status: 'PASS' },
+        { area_code: 'MA-003', reading_type: 'HUMIDITY', value: 48.9, unit: '%RH', status: 'PASS' },
+    ];
+    for (const r of ENV_READINGS) {
+        const areaId = areaMap[r.area_code];
+        if (areaId) {
+            const existingReading = await prisma.environmentalReading.findFirst({
+                where: { area_id: areaId, reading_type: r.reading_type },
+            });
+            if (!existingReading) {
+                await prisma.environmentalReading.create({
+                    data: {
+                        area_id: areaId,
+                        reading_type: r.reading_type,
+                        value: r.value,
+                        unit: r.unit,
+                        status: r.status,
+                        recorded_by: analystId,
+                    },
+                });
+            }
+        }
+    }
+    console.log(`  [Phase3] Environmental readings seeded (${ENV_READINGS.length} readings)`);
+    const stockLedgerItems = [
+        { material_code: 'RM-AMOX-API', material_name: 'Amoxicillin Trihydrate API', receipt_code: 'MRN-2026-001', qty: 150000, unit: 'g', lot: 'AMOX-SB-001', expiry: new Date('2027-01-01') },
+        { material_code: 'RM-AMOX-API', material_name: 'Amoxicillin Trihydrate API', receipt_code: 'MRN-2026-013', qty: 10000, unit: 'g', lot: 'PR-AMOX-B003', expiry: new Date('2027-11-01') },
+        { material_code: 'RM-PARA-API', material_name: 'Paracetamol API', receipt_code: 'MRN-2026-004', qty: 300000, unit: 'g', lot: 'PARA-SB-001', expiry: new Date('2027-01-15') },
+        { material_code: 'RM-PARA-API', material_name: 'Paracetamol API', receipt_code: 'MRN-2026-018', qty: 60000, unit: 'g', lot: 'PR-PARA-B003', expiry: new Date('2027-10-01') },
+        { material_code: 'RM-LACTOSE', material_name: 'Lactose Monohydrate', receipt_code: null, qty: 80000, unit: 'g', lot: 'LACT-SB-001', expiry: new Date('2027-05-01') },
+    ];
+    let runningBalance = {};
+    for (const item of stockLedgerItems) {
+        const existing = await prisma.stockEntry.findFirst({
+            where: { material_code: item.material_code, movement_type: 'RECEIPT', lot_number: item.lot },
+        });
+        if (!existing) {
+            const prev = runningBalance[item.material_code] || 0;
+            runningBalance[item.material_code] = prev + item.qty;
+            await prisma.stockEntry.create({
+                data: {
+                    material_code: item.material_code,
+                    material_name: item.material_name,
+                    movement_type: 'RECEIPT',
+                    quantity: item.qty,
+                    unit: item.unit,
+                    balance_after: runningBalance[item.material_code],
+                    lot_number: item.lot,
+                    expiry_date: item.expiry,
+                    reference_id: item.receipt_code || 'SEED',
+                    reference_type: 'MaterialReceipt',
+                    recorded_by: resolvedSupervisorId,
+                    notes: 'Initial stock seeded',
+                },
+            });
+        }
+    }
+    console.log(`  [Phase3] Stock ledger entries seeded`);
     console.log('Seed complete.');
 }
 main()
