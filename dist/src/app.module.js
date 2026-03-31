@@ -32,6 +32,7 @@ const env_monitoring_module_1 = require("./env-monitoring/env-monitoring.module"
 const retention_module_1 = require("./retention/retention.module");
 const coa_module_1 = require("./coa/coa.module");
 const notifications_module_1 = require("./notifications/notifications.module");
+const rag_proxy_module_1 = require("./rag-proxy/rag-proxy.module");
 function buildRedisConfig() {
     const url = process.env.REDIS_URL;
     if (url) {
@@ -83,6 +84,7 @@ exports.AppModule = AppModule = __decorate([
             retention_module_1.RetentionModule,
             coa_module_1.CoaModule,
             notifications_module_1.NotificationsModule,
+            rag_proxy_module_1.RagProxyModule,
         ],
     })
 ], AppModule);

@@ -23,6 +23,7 @@ import { EnvMonitoringModule } from './env-monitoring/env-monitoring.module';
 import { RetentionModule } from './retention/retention.module';
 import { CoaModule } from './coa/coa.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { RagProxyModule } from './rag-proxy/rag-proxy.module';
 
 function buildRedisConfig() {
   const url = process.env.REDIS_URL;
@@ -78,6 +79,7 @@ function buildRedisConfig() {
     RetentionModule,
     CoaModule,
     NotificationsModule,
+    RagProxyModule,
   ],
 })
 export class AppModule {}
