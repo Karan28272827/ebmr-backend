@@ -176,6 +176,61 @@ enum DocType {
   PROCESS_FLOW_DIAGRAM
 }
 
+// ─── Phase 2/3 New Enums ──────────────────────────────────────────────────────
+
+enum CAPAStatus {
+  OPEN
+  IN_PROGRESS
+  EFFECTIVENESS_CHECK
+  CLOSED
+}
+
+enum CAPASource {
+  DEVIATION
+  AUDIT
+  COMPLAINT
+  OOS
+  INCIDENT
+}
+
+enum VendorStatus {
+  ACTIVE
+  SUSPENDED
+  DISQUALIFIED
+}
+
+enum StockMovementType {
+  RECEIPT
+  ISSUANCE
+  ADJUSTMENT
+  RETURN
+  EXPIRY_WRITE_OFF
+}
+
+enum EnvReadingStatus {
+  PASS
+  FAIL
+  BORDERLINE
+}
+
+enum NotificationType {
+  DEVIATION_RAISED
+  BATCH_HELD
+  CAPA_ASSIGNED
+  IQC_FAILED
+  EXPIRY_ALERT
+  PASSWORD_EXPIRY
+  OOS_RESULT
+  BATCH_RELEASED
+}
+
+enum RetentionStatus {
+  IN_STORAGE
+  WITHDRAWN
+  EXPIRED
+  DESTROYED
+}
+
 // ─── Core User & Auth ─────────────────────────────────────────────────────────
 
 model User {
@@ -202,6 +257,7 @@ model User {
   issuesRaised     Issue[]             @relation("IssueRaisedBy")
   issuesAssigned   Issue[]             @relation("IssueAssignedTo")
   issuesResolved   Issue[]             @relation("IssueResolvedBy")
+  notifications    Notification[]
 }
 
 model BatchTemplate {
@@ -242,6 +298,10 @@ model Batch {
   qcTests               QCTest[]
   materialUsages        BatchMaterialUsage[]
   plannedBatchLinks     PlannedBatch[]
+  retention_samples     RetentionSample[]
+  coa                   CertificateOfAnalysis?
+  capas                 CAPA[]
+  env_readings          EnvironmentalReading[]
 }
 
 model Deviation {
@@ -262,6 +322,7 @@ model Deviation {
 
   batch  Batch @relation(fields: [batchId], references: [id])
   raiser User  @relation("RaisedBy", fields: [raisedBy], references: [id])
+  capas  CAPA[] @relation("DeviationCAPAs")
 }
 
 // Append-only audit log — never UPDATE or DELETE rows in this table
@@ -277,6 +338,10 @@ model AuditLog {
   beforeState Json?
   afterState  Json?
   metadata    Json?
+  reason      String?
+  ip_address  String?
+  row_hash    String?
+  prev_hash   String?
 
   actor User   @relation(fields: [actorId], references: [id])
   batch Batch? @relation(fields: [batchId], references: [id])
@@ -305,9 +370,10 @@ model Material {
   description  String?
   createdAt    DateTime @default(now())
 
-  bomItems  BomItem[]
-  issuances MaterialIssuance[]
-  receipts  MaterialReceipt[]
+  bomItems     BomItem[]
+  issuances    MaterialIssuance[]
+  receipts     MaterialReceipt[]
+  stock_entries StockEntry[]
 }
 
 model BomItem {
@@ -500,11 +566,35 @@ model MaterialIntent {
   purchase_orders PurchaseOrder[]
 }
 
+model Vendor {
+  id                  String       @id @default(uuid())
+  vendor_code         String       @unique
+  name                String
+  country             String
+  contact_name        String?
+  contact_email       String?
+  contact_phone       String?
+  address             String?      @db.Text
+  status              VendorStatus @default(ACTIVE)
+  qualification_date  DateTime?
+  next_audit_date     DateTime?
+  materials_supplied  String[]     @default([])
+  approved_categories String[]     @default([])
+  notes               String?      @db.Text
+  created_by          String
+  created_at          DateTime     @default(now())
+  updated_at          DateTime     @updatedAt
+
+  purchase_orders PurchaseOrder[]
+}
+
 model PurchaseOrder {
   id                String   @id @default(uuid())
   po_number         String   @unique
   intent_id         String
   intent            MaterialIntent @relation(fields: [intent_id], references: [id])
+  vendor_id         String?
+  vendor            Vendor?  @relation(fields: [vendor_id], references: [id])
   supplier_name     String
   supplier_code     String
   material_name     String
@@ -545,6 +635,7 @@ model MaterialReceipt {
 
   qc_tests              QCTest[]
   batch_material_usages BatchMaterialUsage[]
+  stock_entries         StockEntry[]
 }
 
 model GRN {
@@ -575,6 +666,30 @@ model BatchMaterialUsage {
   recorded_at   DateTime        @default(now())
 }
 
+// ─── Stock Ledger ─────────────────────────────────────────────────────────────
+
+model StockEntry {
+  id             String            @id @default(uuid())
+  material_code  String
+  material_name  String
+  receipt_id     String?
+  material_id    String?
+  movement_type  StockMovementType
+  quantity       Float
+  unit           String
+  balance_after  Float
+  lot_number     String?
+  expiry_date    DateTime?
+  reference_id   String
+  reference_type String
+  recorded_by    String
+  recorded_at    DateTime          @default(now())
+  notes          String?
+
+  receipt  MaterialReceipt? @relation(fields: [receipt_id], references: [id])
+  material Material?        @relation(fields: [material_id], references: [id])
+}
+
 // ─── Module 4: Dynamic BOM ────────────────────────────────────────────────────
 
 model BOM {
@@ -589,6 +704,8 @@ model BOM {
   status           BOMStatus @default(DRAFT)
   approved_by      String?
   approved_at      DateTime?
+  locked_at        DateTime?
+  locked_by        String?
   created_by       String
   created_at       DateTime  @default(now())
 
@@ -627,6 +744,7 @@ model BOMProcessStep {
   qc_parameter_set     QCParameterSet? @relation(fields: [qc_parameter_set_id], references: [id])
   scalable_params      Json            @default("[]")
   is_critical_step     Boolean         @default(false)
+  has_lqc_gate         Boolean         @default(false)
 }
 
 // ─── Module 5: QC Checklists ──────────────────────────────────────────────────
@@ -786,4 +904,162 @@ model MaterialExpiryAlert {
   is_acknowledged Boolean    @default(false)
   acknowledged_by String?
   created_at      DateTime   @default(now())
+}
+
+// ─── Phase 2: CAPA Module ─────────────────────────────────────────────────────
+
+model CAPA {
+  id                   String     @id @default(uuid())
+  capa_code            String     @unique
+  source               CAPASource
+  source_ref           String
+  deviation_id         String?
+  batch_id             String?
+  title                String
+  description          String     @db.Text
+  root_cause           String?    @db.Text
+  immediate_action     String?    @db.Text
+  corrective_action    String?    @db.Text
+  preventive_action    String?    @db.Text
+  status               CAPAStatus @default(OPEN)
+  priority             IssueSeverity @default(MEDIUM)
+  assigned_to          String?
+  due_date             DateTime?
+  completed_at         DateTime?
+  effectiveness_check  String?    @db.Text
+  effectiveness_date   DateTime?
+  verified_by          String?
+  verified_at          DateTime?
+  closed_by            String?
+  closed_at            DateTime?
+  raised_by            String
+  raised_at            DateTime   @default(now())
+  updated_at           DateTime   @updatedAt
+
+  deviation Deviation? @relation("DeviationCAPAs", fields: [deviation_id], references: [id])
+  batch     Batch?     @relation(fields: [batch_id], references: [id])
+}
+
+// ─── Phase 2: QC Specification Master ─────────────────────────────────────────
+
+model QCSpecification {
+  id           String    @id @default(uuid())
+  spec_code    String    @unique
+  product_code String
+  product_name String
+  bom_id       String?
+  version      String
+  status       SOPStatus @default(DRAFT)
+  approved_by  String?
+  approved_at  DateTime?
+  created_by   String
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  parameters QCSpecParameter[]
+}
+
+model QCSpecParameter {
+  id            String          @id @default(uuid())
+  spec_id       String
+  spec          QCSpecification @relation(fields: [spec_id], references: [id])
+  param_code    String
+  name          String
+  qc_stage      QCStage
+  data_type     ParamDataType
+  unit          String?
+  min_value     Float?
+  max_value     Float?
+  target_value  Float?
+  is_mandatory  Boolean         @default(true)
+  test_method   String?
+  sampling_plan String?
+  display_order Int
+}
+
+// ─── Phase 3: Environmental Monitoring ────────────────────────────────────────
+
+model MonitoringArea {
+  id             String   @id @default(uuid())
+  area_code      String   @unique
+  name           String
+  location       String
+  classification String
+  alert_limit    Json     @default("{}")
+  action_limit   Json     @default("{}")
+  is_active      Boolean  @default(true)
+  created_at     DateTime @default(now())
+
+  readings EnvironmentalReading[]
+}
+
+model EnvironmentalReading {
+  id           String           @id @default(uuid())
+  area_id      String
+  area         MonitoringArea   @relation(fields: [area_id], references: [id])
+  reading_type String
+  value        Float
+  unit         String
+  status       EnvReadingStatus
+  recorded_by  String
+  recorded_at  DateTime         @default(now())
+  batch_id     String?
+  batch        Batch?           @relation(fields: [batch_id], references: [id])
+  notes        String?
+}
+
+// ─── Phase 3: Retention Samples ───────────────────────────────────────────────
+
+model RetentionSample {
+  id                String          @id @default(uuid())
+  sample_code       String          @unique
+  batch_id          String
+  batch             Batch           @relation(fields: [batch_id], references: [id])
+  product_code      String
+  product_name      String
+  quantity          Float
+  unit              String
+  storage_location  String
+  storage_condition String
+  retain_until      DateTime
+  status            RetentionStatus @default(IN_STORAGE)
+  withdrawn_by      String?
+  withdrawn_at      DateTime?
+  withdrawn_reason  String?
+  recorded_by       String
+  recorded_at       DateTime        @default(now())
+}
+
+// ─── Phase 3: Certificate of Analysis ────────────────────────────────────────
+
+model CertificateOfAnalysis {
+  id              String    @id @default(uuid())
+  coa_number      String    @unique
+  batch_id        String    @unique
+  batch           Batch     @relation(fields: [batch_id], references: [id])
+  spec_id         String?
+  generated_by    String
+  generated_at    DateTime  @default(now())
+  test_results    Json      @default("[]")
+  overall_verdict QCVerdict
+  release_date    DateTime?
+  released_by     String?
+  expiry_date     DateTime?
+  notes           String?   @db.Text
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id             String           @id @default(uuid())
+  user_id        String
+  user           User             @relation(fields: [user_id], references: [id])
+  type           NotificationType
+  title          String
+  message        String
+  reference_id   String?
+  reference_type String?
+  is_read        Boolean          @default(false)
+  created_at     DateTime         @default(now())
+  read_at        DateTime?
 }

@@ -7,7 +7,12 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 export class AuditController {
   constructor(private auditService: AuditService) {}
 
-  @Get(':batchId')
+  @Get('integrity')
+  verifyIntegrity(@Query('limit') limit?: string) {
+    return this.auditService.verifyIntegrity(limit ? parseInt(limit) : 1000);
+  }
+
+  @Get('batch/:batchId')
   getForBatch(@Param('batchId') batchId: string) {
     return this.auditService.getForBatch(batchId);
   }

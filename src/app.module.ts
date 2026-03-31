@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { BatchesModule } from './batches/batches.module';
@@ -14,6 +15,14 @@ import { QcModule } from './qc/qc.module';
 import { ProcessFlowModule } from './process-flow/process-flow.module';
 import { PlanningModule } from './planning/planning.module';
 import { AdminModule } from './admin/admin.module';
+import { CapaModule } from './capa/capa.module';
+import { VendorModule } from './vendor/vendor.module';
+import { StockModule } from './stock/stock.module';
+import { QcSpecModule } from './qc-spec/qc-spec.module';
+import { EnvMonitoringModule } from './env-monitoring/env-monitoring.module';
+import { RetentionModule } from './retention/retention.module';
+import { CoaModule } from './coa/coa.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 function buildRedisConfig() {
   const url = process.env.REDIS_URL;
@@ -45,6 +54,7 @@ function buildRedisConfig() {
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
     BullModule.forRoot(buildRedisConfig() as any),
     PrismaModule,
     AuthModule,
@@ -60,6 +70,14 @@ function buildRedisConfig() {
     ProcessFlowModule,
     PlanningModule,
     AdminModule,
+    CapaModule,
+    VendorModule,
+    StockModule,
+    QcSpecModule,
+    EnvMonitoringModule,
+    RetentionModule,
+    CoaModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}
